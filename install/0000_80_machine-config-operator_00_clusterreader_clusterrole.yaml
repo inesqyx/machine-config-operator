@@ -29,7 +29,11 @@ rules:
       - controllerconfigs
       - kubeletconfigs
       - machineconfigpools
+      - machinestates
     verbs:
       - get
       - list
       - watch
+      - create
+      - patch
+      - update

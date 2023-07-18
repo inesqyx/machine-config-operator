@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"time"
+
 	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -381,14 +383,15 @@ type MachineConfigPoolCondition struct {
 type MachineConfigPoolConditionType string
 
 const (
-	// MachineConfigPoolUpdated means MachineConfigPool is updated completely.
-	// When the all the machines in the pool are updated to the correct machine config.
-	MachineConfigPoolUpdated MachineConfigPoolConditionType = "Updated"
+	// do we use our new types to help inform these more?
+	// or do we replace these with our types.
 
 	// MachineConfigPoolUpdating means MachineConfigPool is updating.
 	// When at least one of machine is not either not updated or is in the process of updating
 	// to the desired machine config.
 	MachineConfigPoolUpdating MachineConfigPoolConditionType = "Updating"
+
+	MachineConfigPoolUpdated MachineConfigPoolConditionType = "Updated"
 
 	// MachineConfigPoolNodeDegraded means the update for one of the machine is not progressing
 	MachineConfigPoolNodeDegraded MachineConfigPoolConditionType = "NodeDegraded"
@@ -407,6 +410,152 @@ const (
 
 	MachineConfigPoolBuildFailed MachineConfigPoolConditionType = "BuildFailed"
 )
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// MachineState describes the health of the Machines on the system
+type MachineState struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   MachineStateSpec   `json:"spec"`
+	Status MachineStateStatus `json:"status"`
+}
+
+type MachineStateList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []MachineState `json:"machineStates"`
+}
+
+type MachineStateSpec struct {
+	Kind   MachineStateType   `json:"machineStateKind"`
+	Config MachineStateConfig `json:"configuration"`
+}
+
+// somehow have to have updateInProgress on node X with phase and reason X Y
+// what makes the most sense. Node would be great but not all things deal with nodes.
+// But those that do could use a node???
+
+// Daemon progression will be
+// nodeabc -> Progress
+
+// Controller will be
+// component -> Progress
+
+// Upgrade will be
+// nodeabc -> progress (probably)
+
+// Operator will be
+// a bunch of stuff? pools, mcs, controller configs etc.
+
+// Bootstrap
+
+type MachineStateStatus struct {
+	Config          MachineStateConfig              `json:"configuration"`
+	MostRecentState map[string]ProgressionCondition `json:"progress"`  // object -> progress
+	Progression     []ProgressionCondition          `json:"allStates"` // all recent states
+	MostRecentError StateError                      `json:"error"`
+	Healthy         bool                            `json:"healthy"`
+}
+
+type MachineStateConfig struct {
+	corev1.ObjectReference `json:",inline"`
+	MetricsOptions         `json:"metricsOptions"`
+}
+
+type MetricsOptions struct {
+	Ignore              []string      `json:"ignore"`
+	CollectionFrequency time.Duration `json:"collectionFrequency"`
+}
+
+type State struct {
+	State      StateProgress  `json:"state"`
+	Phase      string         `json:"phase"`
+	Reason     string         `json:"reason"`
+	Object     OperatorObject `json:"object"` // ???
+	ObjectName string         `json:"objectName"`
+	Time       metav1.Time    `json:"time"`
+}
+
+type OperatorObject string
+
+const (
+	MCP  OperatorObject = "MachineConfigPool"
+	KC   OperatorObject = "KubeletConfig"
+	MC   OperatorObject = "MachineConfig"
+	CC   OperatorObject = "ControllerConfig"
+	Node OperatorObject = "Node"
+)
+
+type StateProgress string
+
+// node tracking?
+
+// This is fine bc it limits the size
+// but the issue is I don't quite like how
+// we split the op, updating up into more granular tags but the mcc, metrics, bootstrap prog aren't
+// but tbh, it structurally makes sense since the more granular ones have ALOT of sub states
+const (
+	OperatorSyncRenderConfig          StateProgress = "OperatorSyncRenderConfig"
+	OperatorSyncMCP                   StateProgress = "OperatorSyncMCP"
+	OperatorSyncMCD                   StateProgress = "OperatorSyncMCD"
+	OperatorSyncMCC                   StateProgress = "OperatorSyncMCC"
+	OperatorSyncMCS                   StateProgress = "OperatorSyncMCS"
+	OperatorSyncMCPRequired           StateProgress = "OperatorSyncMCPRequired"
+	OperatorSyncKubeletConfig         StateProgress = "OperatorSyncKubeletConfig"
+	MachineConfigPoolUpdatePreparing  StateProgress = "UpdatePreparing"
+	MachineConfigPoolUpdateInProgress StateProgress = "UpdateInProgress"
+	MachineConfigPoolUpdatePostAction StateProgress = "UpdatePostAction"
+	MachineConfigPoolUpdateCompleting StateProgress = "UpdateCompleting"
+	MachineConfigPoolUpdateComplete   StateProgress = "Updated"
+	MachineConfigPoolResuming         StateProgress = "Resuming"
+	MachineConfigPoolReady            StateProgress = "Ready"
+	MachineConfigPoolUpdateErrored    StateProgress = "UpdateErrored"
+	MCCSync                           StateProgress = "StateControllerSyncController"
+	MCDSync                           StateProgress = "StateControlerSyncDaemon"
+	MetricsSync                       StateProgress = "StateControllerSyncMetrics"
+	BootstrapProgression              StateProgress = "BootstrapProgression"
+
+	// thid might get a little long. Maybe more general
+)
+
+type MachineStateType string
+
+const (
+	UpgradeProgression      MachineStateType = "UpgradeProgression"
+	MCCBootstrapProgression MachineStateType = "MCCBootstrapProgression"
+	MCSBootstrapProgression MachineStateType = "MCSBootstrapProgression"
+	OperatorProgression     MachineStateType = "OperatorProgression"
+	ControllerState         MachineStateType = "ControllerState"
+	DaemonState             MachineStateType = "DaemonState"
+	ServerState             MachineStateType = "ServerState"
+	UpdatingMetrics         MachineStateType = "UpdatingMetrics"
+)
+
+type StateError string
+
+const ()
+
+type StateSubController string
+
+const (
+	StateSubControllerBootstrap StateSubController = "BootstrapStateController"
+	StateSubControllerPool      StateSubController = "UpgradeStateController"
+	StateSubControllerOperator  StateSubController = "OperatorStateController"
+)
+
+type ProgressionCondition struct {
+	Kind   OperatorObject `json:"kind"`
+	Name   string         `json:"name"`
+	State  StateProgress  `json:"state"`
+	Phase  string         `json:"phase"`
+	Reason string         `json:"reason"`
+	Time   metav1.Time    `json:"time"`
+}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

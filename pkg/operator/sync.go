@@ -72,6 +72,14 @@ type manifestPaths struct {
 }
 
 const (
+	// Machine OS Builder manifest paths
+	mscClusterRoleManifestPath              = "manifests/machine-state-controller/clusterrole.yaml"
+	mscEventsClusterRoleManifestPath        = "manifests/machine-state-controller/events-clusterrole.yaml"
+	mscEventsRoleBindingDefaultManifestPath = "manifests/machine-state-controller/events-rolebinding-default.yaml"
+	mscEventsRoleBindingTargetManifestPath  = "manifests/machine-state-controller/events-rolebinding-target.yaml"
+	mscClusterRoleBindingManifestPath       = "manifests/machine-state-controller/clusterrolebinding.yaml"
+	mscServiceAccountManifestPath           = "manifests/machine-state-controller/sa.yaml"
+
 	// Machine Config Controller manifest paths
 	mccClusterRoleManifestPath                = "manifests/machineconfigcontroller/clusterrole.yaml"
 	mccEventsClusterRoleManifestPath          = "manifests/machineconfigcontroller/events-clusterrole.yaml"
@@ -578,6 +586,7 @@ func (optr *Operator) syncCustomResourceDefinitions() error {
 	return nil
 }
 
+// we need to mimic this
 func (optr *Operator) syncMachineConfigPools(config *renderConfig) error {
 	mcps := []string{
 		"manifests/master.machineconfigpool.yaml",
@@ -628,6 +637,70 @@ func (optr *Operator) syncMachineConfigPools(config *renderConfig) error {
 		}
 	}
 
+	return nil
+}
+
+// we need to mimic this
+func (optr *Operator) syncMachineStates(config *renderConfig) error {
+	paths := manifestPaths{
+		clusterRoles: []string{
+			mscClusterRoleManifestPath,
+			mscEventsClusterRoleManifestPath,
+		},
+		roleBindings: []string{
+			mscEventsRoleBindingDefaultManifestPath,
+			mscEventsRoleBindingTargetManifestPath,
+		},
+		clusterRoleBindings: []string{
+			mscClusterRoleBindingManifestPath,
+		},
+		serviceAccounts: []string{
+			mscServiceAccountManifestPath,
+		},
+	}
+	if err := optr.applyManifests(config, paths); err != nil {
+		return fmt.Errorf("failed to apply machine state controller manifests: %w", err)
+	}
+
+	mscBytes, err := renderAsset(config, "manifests/machine-state-controller/deployment.yaml")
+	if err != nil {
+		return err
+	}
+	ms := resourceread.ReadDeploymentV1OrDie(mscBytes)
+
+	_, updated, err := mcoResourceApply.ApplyDeployment(optr.kubeClient.AppsV1(), ms)
+	if err != nil {
+		return err
+	}
+	if updated {
+		if err := optr.waitForDeploymentRollout(ms); err != nil {
+			return err
+		}
+	}
+	msc := []string{
+		"manifests/metrics.machinestate.yaml",
+		"manifests/bootstrap.machinestate.yaml",
+		"manifests/mcc.machinestate.yaml",
+		"manifests/mcd.machinestate.yaml",
+		"manifests/operator.machinestate.yaml",
+		"manifests/upgrade.worker.machinestate.yaml",
+		"manifests/upgrade.master.machinestate.yaml",
+	}
+
+	for _, ms := range msc {
+		klog.Infof("Applying MachineState %s", ms)
+		mcsBytes, err := renderAsset(config, ms)
+		if err != nil {
+			klog.Errorf("error rendering asset for MachineState %s", ms)
+			return err
+		}
+		klog.Infof("state to be applied: %s", string(mcsBytes))
+		p := mcoResourceRead.ReadMachineStateV1OrDie(mcsBytes)
+		_, _, err = mcoResourceApply.ApplyMachineState(optr.client.MachineconfigurationV1(), p)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -762,6 +835,7 @@ func (optr *Operator) safetySyncControllerConfig(config *renderConfig) error {
 // the operator version and controller version match. We can call it from safetySyncControllerConfig
 // because safetySyncControllerConfig ensures that the operator and controller versions match before it syncs.
 func (optr *Operator) syncControllerConfig(config *renderConfig) error {
+	// important
 	ccBytes, err := renderAsset(config, "manifests/machineconfigcontroller/controllerconfig.yaml")
 	if err != nil {
 		return err
@@ -1085,6 +1159,7 @@ func (optr *Operator) syncRequiredMachineConfigPools(_ *renderConfig) error {
 
 	requiredMachineCount := 0
 	for _, pool := range pools {
+		klog.Infof("Pool!!! %s", pool.Name)
 		_, hasRequiredPoolLabel := pool.Labels[requiredForUpgradeMachineConfigPoolLabelKey]
 		if hasRequiredPoolLabel {
 			requiredMachineCount += int(pool.Status.MachineCount)
@@ -1093,7 +1168,9 @@ func (optr *Operator) syncRequiredMachineConfigPools(_ *renderConfig) error {
 
 	// Let's start with a 10 minute timeout per "required" node.
 	if err := wait.PollUntilContextTimeout(ctx, time.Second, time.Duration(requiredMachineCount*10)*time.Minute, false, func(ctx context.Context) (bool, error) {
+		klog.Infof("Last err: %w", lastErr)
 		if err := optr.syncMetrics(); err != nil {
+			klog.Errorf("error with metrics syncing")
 			return false, err
 		}
 		if lastErr != nil {
