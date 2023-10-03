@@ -7,7 +7,6 @@ import (
 
 	"k8s.io/klog/v2"
 
-	v1 "github.com/openshift/api/machineconfiguration/v1"
 	configclientset "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/openshift/machine-config-operator/pkg/constants"
 	ctrlcommon "github.com/openshift/machine-config-operator/pkg/controller/common"
@@ -39,6 +38,7 @@ import (
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
 	"github.com/openshift/library-go/pkg/operator/events"
 
+	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
 	mcfgclientset "github.com/openshift/client-go/machineconfiguration/clientset/versioned"
 	"github.com/openshift/client-go/machineconfiguration/clientset/versioned/scheme"
 	mcfginformersv1 "github.com/openshift/client-go/machineconfiguration/informers/externalversions/machineconfiguration/v1"
@@ -69,6 +69,7 @@ type Operator struct {
 
 	operatorHealthEvents record.EventRecorder
 	stateControllerPod   *corev1.Pod
+	operatorMetricEvents record.EventRecorder
 
 	client        mcfgclientset.Interface
 	kubeClient    kubernetes.Interface
@@ -197,6 +198,7 @@ func New(
 	healtheventBroadcaster.StartLogging(klog.V(2).Infof)
 	healtheventBroadcaster.StartRecordingToSink(&coreclientsetv1.EventSinkImpl{Interface: kubeClient.CoreV1().Events("openshift-machine-config-operator")})
 	optr.operatorHealthEvents = healtheventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "operator-health"})
+	optr.operatorMetricEvents = healtheventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "metrics"})
 
 	for _, i := range []cache.SharedIndexInformer{
 		controllerConfigInformer.Informer(),
@@ -497,7 +499,7 @@ func (op *Operator) EmitHealthEvent(pod *corev1.Pod, annos map[string]string, ev
 
 }
 
-func (op *Operator) HealthAnnotations(object string, objectType string, kind v1.StateProgress) map[string]string {
+func (op *Operator) HealthAnnotations(object string, objectType string, kind mcfgv1.StateProgress) map[string]string {
 	annos := make(map[string]string)
 	annos["ms"] = "OperatorHealth" //might need this might not
 	annos["state"] = string(kind)

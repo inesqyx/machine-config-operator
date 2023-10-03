@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 	clientset "k8s.io/client-go/kubernetes"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -58,12 +57,13 @@ var (
 
 // Controller defines the render controller.
 type Controller struct {
-	client               mcfgclientset.Interface
-	eventRecorder        record.EventRecorder
-	healthEventsRecorder record.EventRecorder
+	client        mcfgclientset.Interface
+	kubeClient    clientset.Interface
+	eventRecorder record.EventRecorder
 
-	kubeClient         kubernetes.Interface
-	stateControllerPod *corev1.Pod
+	healthEventsRecorder   record.EventRecorder
+	controllerMetricEvents record.EventRecorder
+	stateControllerPod     *corev1.Pod
 
 	syncHandler              func(mcp string) error
 	enqueueMachineConfigPool func(*mcfgv1.MachineConfigPool)
@@ -126,11 +126,21 @@ func New(
 }
 
 // Run executes the render controller.
-func (ctrl *Controller) Run(workers int, stopCh <-chan struct{}, healthEvents record.EventRecorder) {
+func (ctrl *Controller) Run(workers int, stopCh <-chan struct{}, healthEvents record.EventRecorder, controllerMetricEvents record.EventRecorder) {
 	defer utilruntime.HandleCrash()
 	defer ctrl.queue.ShutDown()
 
+	healthPod, err := state.StateControllerPod(ctrl.kubeClient)
+	if err != nil {
+		klog.Error(err)
+	}
+
+	if healthPod != nil {
+		ctrl.stateControllerPod = healthPod
+	}
+
 	ctrl.healthEventsRecorder = healthEvents
+	ctrl.controllerMetricEvents = controllerMetricEvents
 
 	if !cache.WaitForCacheSync(stopCh, ctrl.mcpListerSynced, ctrl.mcListerSynced, ctrl.ccListerSynced) {
 		return
@@ -515,10 +525,17 @@ func (ctrl *Controller) syncGeneratedMachineConfig(pool *mcfgv1.MachineConfigPoo
 	// Emit event and collect metric when OSImageURL was overridden.
 	if generated.Spec.OSImageURL != ctrlcommon.GetDefaultBaseImageContainer(&cc.Spec) {
 		ctrlcommon.OSImageURLOverride.WithLabelValues(pool.Name).Set(1)
+		// Migrate the metric update to eventing
+		annos := state.WriteMetricAnnotations(string(mcfgv1.MCP), pool.Name)
+		state.EmitMetricEvent(ctrl.controllerMetricEvents, ctrl.stateControllerPod, ctrl.kubeClient, annos, corev1.EventTypeNormal, "OSImageURLOverride", fmt.Sprintf("Set 1"))
+
 		ctrl.eventRecorder.Eventf(generated, corev1.EventTypeNormal, "OSImageURLOverridden", "OSImageURL was overridden via machineconfig in %s (was: %s is: %s)", generated.Name, cc.Spec.OSImageURL, generated.Spec.OSImageURL)
 	} else {
 		// Reset metric when OSImageURL has not been overridden
 		ctrlcommon.OSImageURLOverride.WithLabelValues(pool.Name).Set(0)
+		// Migrate the metric update to eventing
+		annos := state.WriteMetricAnnotations(string(mcfgv1.MCP), pool.Name)
+		state.EmitMetricEvent(ctrl.controllerMetricEvents, ctrl.stateControllerPod, ctrl.kubeClient, annos, corev1.EventTypeNormal, "OSImageURLOverride", fmt.Sprintf("Set 0"))
 	}
 
 	source := []corev1.ObjectReference{}

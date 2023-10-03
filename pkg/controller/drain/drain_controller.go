@@ -89,12 +89,13 @@ func DefaultConfig() Config {
 
 // Controller defines the node controller.
 type Controller struct {
-	client               mcfgclientset.Interface
-	kubeClient           clientset.Interface
-	eventRecorder        record.EventRecorder
-	healthEventsRecorder record.EventRecorder
-	updateEventsRecorder record.EventRecorder
-	stateControllerPod   *corev1.Pod
+	client                 mcfgclientset.Interface
+	kubeClient             clientset.Interface
+	eventRecorder          record.EventRecorder
+	healthEventsRecorder   record.EventRecorder
+	updateEventsRecorder   record.EventRecorder
+	controllerMetricEvents record.EventRecorder
+	stateControllerPod     *corev1.Pod
 
 	syncHandler func(node string) error
 	enqueueNode func(*corev1.Node)
@@ -155,7 +156,7 @@ func (w writer) Write(p []byte) (n int, err error) {
 }
 
 // Run executes the drain controller.
-func (ctrl *Controller) Run(workers int, stopCh <-chan struct{}, healthEvents record.EventRecorder, updateEvents record.EventRecorder) {
+func (ctrl *Controller) Run(workers int, stopCh <-chan struct{}, healthEvents record.EventRecorder, updateEvents record.EventRecorder, controllerMetricEvents record.EventRecorder) {
 	defer utilruntime.HandleCrash()
 	defer ctrl.queue.ShutDown()
 
@@ -170,6 +171,7 @@ func (ctrl *Controller) Run(workers int, stopCh <-chan struct{}, healthEvents re
 
 	ctrl.healthEventsRecorder = healthEvents
 	ctrl.updateEventsRecorder = updateEvents
+	ctrl.controllerMetricEvents = controllerMetricEvents
 
 	if !cache.WaitForCacheSync(stopCh, ctrl.nodeListerSynced) {
 		return
@@ -376,6 +378,9 @@ func (ctrl *Controller) drainNode(node *corev1.Node, drainer *drain.Helper) erro
 		if duration > ctrl.cfg.DrainTimeoutDuration {
 			klog.Errorf("node %s: drain exceeded timeout: %v. Will continue to retry.", node.Name, ctrl.cfg.DrainTimeoutDuration)
 			ctrlcommon.MCCDrainErr.WithLabelValues(node.Name).Set(1)
+			// Migrate the metric update to eventing
+			annos := state.WriteMetricAnnotations(string(mcfgv1.Node), node.Name)
+			state.EmitMetricEvent(ctrl.controllerMetricEvents, ctrl.stateControllerPod, ctrl.kubeClient, annos, corev1.EventTypeNormal, "MCCDrainErr", fmt.Sprintf("Set 1"))
 		}
 		break
 	}
@@ -414,6 +419,9 @@ func (ctrl *Controller) drainNode(node *corev1.Node, drainer *drain.Helper) erro
 	delete(ctrl.ongoingDrains, node.Name)
 
 	// Clear the MCCDrainErr, if any.
+	// Migrate the metric update to eventing
+	annos := state.WriteMetricAnnotations(string(mcfgv1.Node), node.Name)
+	state.EmitMetricEvent(ctrl.controllerMetricEvents, ctrl.stateControllerPod, ctrl.kubeClient, annos, corev1.EventTypeNormal, "MCCDrainErr", fmt.Sprintf("Delete"))
 	if ctrlcommon.MCCDrainErr.DeleteLabelValues(node.Name) {
 		klog.Infof("Cleaning up MCCDrain error for node(%s) as drain was completed", node.Name)
 	}

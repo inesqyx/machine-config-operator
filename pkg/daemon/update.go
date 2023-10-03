@@ -27,6 +27,7 @@ import (
 
 	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
 	ctrlcommon "github.com/openshift/machine-config-operator/pkg/controller/common"
+	"github.com/openshift/machine-config-operator/pkg/controller/state"
 	"github.com/openshift/machine-config-operator/pkg/daemon/constants"
 	pivottypes "github.com/openshift/machine-config-operator/pkg/daemon/pivot/types"
 	pivotutils "github.com/openshift/machine-config-operator/pkg/daemon/pivot/utils"
@@ -2054,6 +2055,14 @@ func (dn *Daemon) reboot(rationale string) error {
 	if err := rebootCmd.Run(); err != nil {
 		logSystem("failed to run reboot: %v", err)
 		mcdRebootErr.Inc()
+		// Migrate the metric update to eventing
+		var annos map[string]string
+		if dn.node == nil {
+			annos = state.WriteMetricAnnotations("None", "Firstboot")
+		} else {
+			annos = state.WriteMetricAnnotations(string(mcfgv1.Node), dn.node.Name)
+		}
+		state.EmitMetricEvent(dn.daemonMetricEvents, dn.stateControllerPod, dn.kubeClient, annos, corev1.EventTypeNormal, "mcdRebootErr", fmt.Sprintf("+1"))
 		return fmt.Errorf("reboot command failed, something is seriously wrong")
 	}
 	// if we're here, reboot went through successfully, so we set rebootQueued
@@ -2117,6 +2126,14 @@ func (dn *CoreOSDaemon) applyLayeredOSChanges(mcDiff machineConfigDiff, oldConfi
 	if mcDiff.osUpdate || mcDiff.kernelType {
 		if err := dn.queueRevertRTKernel(); err != nil {
 			mcdPivotErr.Inc()
+			// Migrate the metric update to eventing
+			var annos map[string]string
+			if dn.node == nil {
+				annos = state.WriteMetricAnnotations("None", "Firstboot")
+			} else {
+				annos = state.WriteMetricAnnotations(string(mcfgv1.Node), dn.node.Name)
+			}
+			state.EmitMetricEvent(dn.daemonMetricEvents, dn.stateControllerPod, dn.kubeClient, annos, corev1.EventTypeNormal, "mcdPivotErr", fmt.Sprintf("+ 1"))
 			return err
 		}
 	}
@@ -2125,6 +2142,14 @@ func (dn *CoreOSDaemon) applyLayeredOSChanges(mcDiff machineConfigDiff, oldConfi
 	if mcDiff.osUpdate {
 		if err := dn.updateLayeredOS(newConfig); err != nil {
 			mcdPivotErr.Inc()
+			// Migrate the metric update to eventing
+			var annos map[string]string
+			if dn.node == nil {
+				annos = state.WriteMetricAnnotations("None", "Firstboot")
+			} else {
+				annos = state.WriteMetricAnnotations(string(mcfgv1.Node), dn.node.Name)
+			}
+			state.EmitMetricEvent(dn.daemonMetricEvents, dn.stateControllerPod, dn.kubeClient, annos, corev1.EventTypeNormal, "mcdPivotErr", fmt.Sprintf("+ 1"))
 			return err
 		}
 		if dn.nodeWriter != nil {
@@ -2139,7 +2164,14 @@ func (dn *CoreOSDaemon) applyLayeredOSChanges(mcDiff machineConfigDiff, oldConfi
 
 	// if we're here, we've successfully pivoted, or pivoting wasn't necessary, so we reset the error gauge
 	mcdPivotErr.Set(0)
-
+	// Migrate the metric update to eventing
+	var annos map[string]string
+	if dn.node == nil {
+		annos = state.WriteMetricAnnotations("None", "Firstboot")
+	} else {
+		annos = state.WriteMetricAnnotations(string(mcfgv1.Node), dn.node.Name)
+	}
+	state.EmitMetricEvent(dn.daemonMetricEvents, dn.stateControllerPod, dn.kubeClient, annos, corev1.EventTypeNormal, "mcdPivotErr", fmt.Sprintf("set 0"))
 	if mcDiff.kargs {
 		if err := dn.updateKernelArguments(oldConfig.Spec.KernelArguments, newConfig.Spec.KernelArguments); err != nil {
 			return err
