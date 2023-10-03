@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 
-	v1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	v1 "github.com/openshift/api/machineconfiguration/v1"
 )
 
 func (ctrl *Controller) WriteStatus(kind string, status, reason string, annos map[string]string) error {
