@@ -38,6 +38,11 @@ var (
 			Name: "mcc_pool_alert",
 			Help: "pool status alert",
 		}, []string{"node"})
+	mscTest2 = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "msc_test_2",
+			Help: "Test the communication between the state controller and the Prometheus.",
+		})
 )
 
 func RegisterMCCMetrics() error {
@@ -45,6 +50,7 @@ func RegisterMCCMetrics() error {
 		OSImageURLOverride,
 		MCCDrainErr,
 		MCCPoolAlert,
+		mscTest2,
 	})
 
 	if err != nil {
