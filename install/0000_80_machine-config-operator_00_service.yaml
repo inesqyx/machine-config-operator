@@ -81,3 +81,6 @@ spec:
   - name: metrics
     port: 9001
     protocol: TCP
+  - name: metrics-receiver
+    port: 443
+    targetPort: 8080

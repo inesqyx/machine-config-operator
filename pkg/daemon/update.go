@@ -3,9 +3,11 @@ package daemon
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io/fs"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/user"
@@ -1767,6 +1769,34 @@ func (dn *Daemon) useNewSSHKeyPath() bool {
 // Update a given PasswdUser's SSHKey
 func (dn *Daemon) updateSSHKeys(newUsers, oldUsers []ign3types.PasswdUser) error {
 	klog.Info("updating SSH keys")
+
+	// Test service connection
+	intValue := 1
+
+	payload := struct {
+		Value int
+	}{
+		Value: intValue,
+	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		panic(err)
+	}
+
+	url := "https://machine-state-controller:443/receive"
+
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{},
+	}
+
+	client := &http.Client{Transport: transport}
+
+	_, err = client.Post(url, "application/json", bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		panic(err)
+	}
+	// End test
 
 	// Checking to see if absent users need to be deconfigured
 	deconfigureAbsentUsers(newUsers, oldUsers)
