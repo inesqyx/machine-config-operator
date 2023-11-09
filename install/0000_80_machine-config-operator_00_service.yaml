@@ -60,3 +60,19 @@ spec:
   - name: metrics
     port: 9001
     protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: machine-state-controller
+  namespace: openshift-machine-config-operator
+  labels:
+    k8s-app: machine-state-controller
+spec:
+  type: ClusterIP
+  selector:
+    k8s-app: machine-state-controller
+  ports:
+  - name: metrics-receiver
+    port: 9090
+    targetPort: 9090

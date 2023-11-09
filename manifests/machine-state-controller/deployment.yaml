@@ -17,6 +17,10 @@ spec:
       containers:
       - name: machine-state-controller
         image: {{.Images.MachineConfigOperator}}
+        ports:
+        - containerPort: 9090
+          name: metrics-receiver
+          protocol: TCP
         command: ["/usr/bin/machine-state-controller"]
         args:
         - "start"
