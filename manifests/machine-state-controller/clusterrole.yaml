@@ -36,6 +36,9 @@ rules:
 - apiGroups: ["apps"]
   resources: ["daemonsets"]
   verbs: ["get"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list", "watch", "create"]
 - apiGroups:
   - authentication.k8s.io
   resources:
