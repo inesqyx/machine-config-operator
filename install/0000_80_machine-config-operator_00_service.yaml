@@ -73,7 +73,7 @@ spec:
   selector:
     k8s-app: machine-state-controller
   ports:
-  - name: metrics-receiver
+  - name: aggregator
     port: 9090
     targetPort: 9090
     protocol: TCP

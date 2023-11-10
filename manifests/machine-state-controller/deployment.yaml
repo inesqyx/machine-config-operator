@@ -19,7 +19,7 @@ spec:
         image: {{.Images.MachineConfigOperator}}
         ports:
         - containerPort: 9090
-          name: metrics-receiver
+          name: aggregator
           protocol: TCP
         command: ["/usr/bin/machine-state-controller"]
         args:
