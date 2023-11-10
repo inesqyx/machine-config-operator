@@ -76,3 +76,4 @@ spec:
   - name: metrics-receiver
     port: 9090
     targetPort: 9090
+    protocol: TCP
