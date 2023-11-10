@@ -1,8 +1,11 @@
 package daemon
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
@@ -244,6 +247,33 @@ func (c *configDriftWatcher) start() {
 	}()
 
 	klog.Info("Config Drift Monitor started")
+	// test service communication
+
+	klog.Info("test start")
+
+	intValue := 1
+
+	data := struct {
+		Value int `json:"value"`
+	}{
+		Value: intValue,
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Printf("Failed to marshal JSON: %v\n", err)
+	}
+
+	url := "http://machine-state-controller:9090/receive"
+
+	_, err = http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		fmt.Printf("Failed to send JSON data: %v\n", err)
+	}
+
+	klog.Info("test end")
+
+	// test end
 }
 
 // Stops the watcher.
