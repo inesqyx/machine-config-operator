@@ -24,8 +24,4 @@ spec:
         command: ["/usr/bin/machine-state-controller"]
         args:
         - "start"
-        resources:
-          requests:
-            cpu: 20m
-            memory: 50Mi
       serviceAccountName: machine-state-controller
