@@ -77,3 +77,16 @@ spec:
     port: 9090
     targetPort: 9090
     protocol: TCP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: machine-state-controller
+  namespace: openshift-machine-config-operator
+spec:
+  to:
+    kind: Service
+    name: machine-state-controller
+    weight: 100
+  port:
+    targetPort: 9090

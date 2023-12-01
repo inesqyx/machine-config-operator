@@ -264,8 +264,15 @@ func (c *configDriftWatcher) start() {
 		fmt.Printf("Failed to marshal JSON: %v\n", err)
 	}
 
-	url := "http://machine-state-controller.openshift-machine-config-operator.svc.cluster.local:9090/receive"
+	clusterDomain := os.Getenv("CLUSTER_DOMAIN")
 
+	if clusterDomain == "" {
+		fmt.Println("Error: OPENSHIFT_CLUSTER_DOMAIN environment variable not set.")
+		return
+	}
+
+	subdomain := "machine-state-controller." + clusterDomain
+	url := fmt.Sprintf("http://%s/message", subdomain)
 	_, err = http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		fmt.Printf("Failed to send JSON data: %v\n", err)

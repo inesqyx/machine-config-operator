@@ -17,6 +17,11 @@ spec:
       containers:
       - name: machine-state-controller
         image: {{.Images.MachineConfigOperator}}
+        env:
+        - name: CLUSTER_DOMAIN
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.annotations['pod.beta.openshift.io/config.hostname']
         ports:
         - containerPort: 9090
           name: aggregator
