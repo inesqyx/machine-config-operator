@@ -23,13 +23,13 @@ spec:
           protocol: TCP
         command: ["/usr/bin/machine-state-controller"]
         args:
-        - /bin/bash
-        - "-c"
-        - |
-          CLUSTER_DOMAIN=$(echo $KUBERNETES_SERVICE_HOST | cut -d. -f2-)
-      
-          export OPENSHIFT_CLUSTER_DOMAIN=$CLUSTER_DOMAIN
         - "start"
+        - |
+            CLUSTER_DOMAIN=$(echo $KUBERNETES_SERVICE_HOST | cut -d. -f2-)
+      
+            export OPENSHIFT_CLUSTER_DOMAIN=$CLUSTER_DOMAIN
+            
+            exec /usr/bin/machine-state-controller
         env:
         - name: OPENSHIFT_CLUSTER_DOMAIN
           value: ""
