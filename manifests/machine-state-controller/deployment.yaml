@@ -24,13 +24,4 @@ spec:
         command: ["/usr/bin/machine-state-controller"]
         args:
         - "start"
-        - |
-            CLUSTER_DOMAIN=$(echo $KUBERNETES_SERVICE_HOST | cut -d. -f2-)
-      
-            export OPENSHIFT_CLUSTER_DOMAIN=$CLUSTER_DOMAIN
-            
-            exec /usr/bin/machine-state-controller
-        env:
-        - name: OPENSHIFT_CLUSTER_DOMAIN
-          value: ""
       serviceAccountName: machine-state-controller

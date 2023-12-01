@@ -25,6 +25,9 @@ spec:
         args:
           - "start"
           - "--payload-version={{.ReleaseVersion}}"
+          - |
+            ROUTE_HOST=$(oc get route machine-state-controller -n openshift-machine-config-operator -o jsonpath='{.spec.host}')
+            echo "OPENSHIFT_CLUSTER_HOST=$ROUTE_HOST" > /etc/config/openshift-cluster-host
         resources:
           requests:
             cpu: 20m
@@ -38,6 +41,10 @@ spec:
             name: rootfs
             mountPropagation: HostToContainer
         env:
+          - name: OPENSHIFT_CLUSTER_HOST
+            valueFrom:
+              fileRef:
+                path: /etc/config/openshift-cluster-host
           - name: NODE_NAME
             valueFrom:
               fieldRef:
