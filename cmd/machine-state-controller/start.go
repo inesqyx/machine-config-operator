@@ -49,6 +49,8 @@ func runStartCmd(_ *cobra.Command, _ []string) {
 
 		ctrlctx := ctrlcommon.CreateControllerContext(ctx, cb)
 
+		go ctrlcommon.StartServiceListener()
+
 		ctrl := state.New(
 			ctrlctx.KubeInformerFactory.Core().V1().Services(),
 			state.StateControllerConfig{}, ctrlctx.ClientBuilder.KubeClientOrDie(componentName),

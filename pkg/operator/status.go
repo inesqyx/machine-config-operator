@@ -1,9 +1,11 @@
 package operator
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -385,6 +387,33 @@ func (optr *Operator) syncMetrics() error {
 		mcoUpdatedMachineCount.WithLabelValues(pool.Name).Set(float64(pool.Status.UpdatedMachineCount))
 		mcoDegradedMachineCount.WithLabelValues(pool.Name).Set(float64(pool.Status.DegradedMachineCount))
 		mcoUnavailableMachineCount.WithLabelValues(pool.Name).Set(float64(pool.Status.UnavailableMachineCount))
+		// test service communication
+
+		klog.Info("test start")
+
+		intValue := 1
+
+		data := struct {
+			Value int `json:"value"`
+		}{
+			Value: intValue,
+		}
+
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			fmt.Printf("Failed to marshal JSON: %v\n", err)
+		}
+
+		url := "http://machine-state-controller.openshift-machine-config-operator.svc.cluster.local:9090/receive"
+
+		_, err = http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+		if err != nil {
+			fmt.Printf("Failed to send JSON data: %v\n", err)
+		}
+
+		klog.Info("test end")
+
+		// test end
 	}
 	return nil
 }
