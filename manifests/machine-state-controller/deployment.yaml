@@ -17,16 +17,20 @@ spec:
       containers:
       - name: machine-state-controller
         image: {{.Images.MachineConfigOperator}}
-        env:
-        - name: CLUSTER_DOMAIN
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.annotations['pod.beta.openshift.io/config.hostname']
         ports:
         - containerPort: 9090
           name: aggregator
           protocol: TCP
         command: ["/usr/bin/machine-state-controller"]
         args:
+        - "/bin/sh"
+        - "-c"
+        - |
+          CLUSTER_DOMAIN=$(echo $KUBERNETES_SERVICE_HOST | cut -d. -f2-)
+      
+          export OPENSHIFT_CLUSTER_DOMAIN=$CLUSTER_DOMAIN
         - "start"
+        env:
+        - name: OPENSHIFT_CLUSTER_DOMAIN
+          value: ""
       serviceAccountName: machine-state-controller

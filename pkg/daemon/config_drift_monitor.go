@@ -264,7 +264,7 @@ func (c *configDriftWatcher) start() {
 		fmt.Printf("Failed to marshal JSON: %v\n", err)
 	}
 
-	clusterDomain := os.Getenv("CLUSTER_DOMAIN")
+	clusterDomain := os.Getenv("OPENSHIFT_CLUSTER_DOMAIN")
 
 	if clusterDomain == "" {
 		fmt.Println("Error: OPENSHIFT_CLUSTER_DOMAIN environment variable not set.")
