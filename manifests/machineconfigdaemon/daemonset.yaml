@@ -40,12 +40,18 @@ spec:
           - mountPath: /rootfs
             name: rootfs
             mountPropagation: HostToContainer
+          - mountPath: /etc/config/openshift-cluster-host
+            name: openshift-cluster-host-config
+        volumes:
+          - configMap:
+             name: openshift-cluster-host-configmap
+          name: openshift-cluster-host-config
         env:
           - name: OPENSHIFT_CLUSTER_HOST
             valueFrom:
               configMapKeyRef:
                 name: openshift-cluster-host-configmap
-                key: openshift-cluster-host
+                key: openshift-cluster-host-config
           - name: NODE_NAME
             valueFrom:
               fieldRef:
