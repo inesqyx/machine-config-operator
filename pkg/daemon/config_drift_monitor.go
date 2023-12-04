@@ -264,14 +264,14 @@ func (c *configDriftWatcher) start() {
 		fmt.Printf("Failed to marshal JSON: %v\n", err)
 	}
 
-	clusterDomain := os.Getenv("OPENSHIFT_CLUSTER_HOST")
+	clusterHost := os.Getenv("OPENSHIFT_CLUSTER_HOST")
 
-	if clusterDomain == "" {
+	if clusterHost == "" {
 		fmt.Println("Error: OPENSHIFT_CLUSTER_HOST environment variable not set.")
 		return
 	}
 
-	url := "http://" + clusterDomain + "/receive"
+	url := "http://" + clusterHost + "/receive"
 	_, err = http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		fmt.Printf("Failed to send JSON data: %v\n", err)
