@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openshift-cluster-host-configmap
+  namespace: {{.TargetNamespace}}
+data:
+  openhift-cluster-host: ""
