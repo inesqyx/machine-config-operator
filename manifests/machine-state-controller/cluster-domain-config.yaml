@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-domain-config
+  namespace: {{.TargetNamespace}}
+data:
+  OPENSHIFT_CLUSTER_DOMAIN: ""
