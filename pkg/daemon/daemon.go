@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -20,6 +21,7 @@ import (
 
 	ign3types "github.com/coreos/ignition/v2/config/v3_4/types"
 	"github.com/google/renameio"
+	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -88,6 +90,8 @@ type Daemon struct {
 
 	ccLister       mcfglistersv1.ControllerConfigLister
 	ccListerSynced cache.InformerSynced
+
+	dnsLister configlistersv1.DNSLister
 
 	// skipReboot skips the reboot after a sync, only valid with onceFrom != ""
 	skipReboot bool
@@ -2015,6 +2019,40 @@ func (dn *Daemon) updateConfigAndState(state *stateAndConfigs) (bool, bool, erro
 
 		klog.Infof("In desired state %s", state.getCurrentName())
 		UpdateStateMetric(mcdUpdateState, state.getCurrentName(), "")
+
+		// test service communication
+
+		klog.Info("test start")
+
+		intValue := 1
+
+		data := struct {
+			Value int `json:"value"`
+		}{
+			Value: intValue,
+		}
+
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			fmt.Printf("Failed to marshal JSON: %v\n", err)
+		}
+
+		dns, err := dn.dnsLister.Get("cluster")
+		if err != nil {
+			fmt.Printf("Failed to list dns: %v\n", err)
+		}
+
+		url := "http://" + "machine-state-controller-openshift-machine-config-operator.apps." + dns.Spec.BaseDomain + "/receive"
+		klog.Info("%s", url)
+		_, err = http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+		if err != nil {
+			fmt.Printf("Failed to send JSON data: %v\n", err)
+		}
+
+		klog.Info("test end")
+
+		// test end
+
 	}
 
 	// No errors have occurred. Returns true if currentConfig == desiredConfig, false otherwise (needs update)

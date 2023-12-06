@@ -172,6 +172,7 @@ func (nw *clusterNodeWriter) SetDone(state *stateAndConfigs) error {
 	}
 
 	UpdateStateMetric(mcdState, constants.MachineConfigDaemonStateDone, "")
+
 	respChan := make(chan response, 1)
 	nw.writer <- message{
 		annos:           annos,
