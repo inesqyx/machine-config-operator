@@ -2039,7 +2039,7 @@ func (dn *Daemon) updateConfigAndState(state *stateAndConfigs) (bool, bool, erro
 
 		dns, err := dn.dnsLister.Get("cluster")
 		if err != nil {
-			fmt.Printf("Failed to list dns: %v\n", err)
+			return missingODC, inDesiredConfig, fmt.Errorf("failed to retrieve dns object")
 		}
 
 		url := "http://" + "machine-state-controller-openshift-machine-config-operator.apps." + dns.Spec.BaseDomain + "/receive"
