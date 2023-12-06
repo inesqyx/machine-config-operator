@@ -4,4 +4,4 @@ metadata:
   name: openshift-cluster-host-configmap
   namespace: {{.TargetNamespace}}
 data:
-  openhift-cluster-host: ""
+  openshift-cluster-host-config: ""
