@@ -21,6 +21,7 @@ import (
 
 	ign3types "github.com/coreos/ignition/v2/config/v3_4/types"
 	"github.com/google/renameio"
+	configinformersv1 "github.com/openshift/client-go/config/informers/externalversions/config/v1"
 	configlistersv1 "github.com/openshift/client-go/config/listers/config/v1"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
@@ -91,7 +92,8 @@ type Daemon struct {
 	ccLister       mcfglistersv1.ControllerConfigLister
 	ccListerSynced cache.InformerSynced
 
-	dnsLister configlistersv1.DNSLister
+	dnsLister       configlistersv1.DNSLister
+	dnsListerSynced cache.InformerSynced
 
 	// skipReboot skips the reboot after a sync, only valid with onceFrom != ""
 	skipReboot bool
@@ -312,6 +314,7 @@ func (dn *Daemon) ClusterConnect(
 	kubeClient kubernetes.Interface,
 	mcInformer mcfginformersv1.MachineConfigInformer,
 	nodeInformer coreinformersv1.NodeInformer,
+	dnsInformer configinformersv1.DNSInformer,
 	ccInformer mcfginformersv1.ControllerConfigInformer,
 	kubeletHealthzEnabled bool,
 	kubeletHealthzEndpoint string,
@@ -337,8 +340,12 @@ func (dn *Daemon) ClusterConnect(
 	})
 	dn.nodeLister = nodeInformer.Lister()
 	dn.nodeListerSynced = nodeInformer.Informer().HasSynced
+
 	dn.mcLister = mcInformer.Lister()
 	dn.mcListerSynced = mcInformer.Informer().HasSynced
+
+	dn.dnsLister = dnsInformer.Lister()
+	dn.dnsListerSynced = dnsInformer.Informer().HasSynced
 
 	dn.ccQueue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 	ccInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{

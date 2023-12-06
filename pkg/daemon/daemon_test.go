@@ -11,6 +11,7 @@ import (
 
 	ign2types "github.com/coreos/ignition/config/v2_2/types"
 	ign3types "github.com/coreos/ignition/v2/config/v3_4/types"
+	configinformers "github.com/openshift/client-go/config/informers/externalversions"
 	ctrlcommon "github.com/openshift/machine-config-operator/pkg/controller/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,6 +27,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	mcfgv1 "github.com/openshift/api/machineconfiguration/v1"
+	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
 	"github.com/openshift/client-go/machineconfiguration/clientset/versioned/fake"
 	informers "github.com/openshift/client-go/machineconfiguration/informers/externalversions"
 	"github.com/openshift/machine-config-operator/pkg/daemon/constants"
@@ -142,9 +144,11 @@ var (
 func (f *fixture) newController() *Daemon {
 	f.client = fake.NewSimpleClientset(f.objects...)
 	f.kubeclient = k8sfake.NewSimpleClientset(f.kubeobjects...)
+	fakeconfigclient := configfake.NewSimpleClientset()
 
 	i := informers.NewSharedInformerFactory(f.client, noResyncPeriodFunc())
 	k8sI := kubeinformers.NewSharedInformerFactory(f.kubeclient, noResyncPeriodFunc())
+	cfI := configinformers.NewSharedInformerFactory(fakeconfigclient, noResyncPeriodFunc())
 
 	d, err := New(nil)
 	if err != nil {
@@ -154,6 +158,7 @@ func (f *fixture) newController() *Daemon {
 		f.kubeclient,
 		i.Machineconfiguration().V1().MachineConfigs(),
 		k8sI.Core().V1().Nodes(),
+		cfI.Config().V1().DNSes(),
 		i.Machineconfiguration().V1().ControllerConfigs(),
 		false,
 		"",

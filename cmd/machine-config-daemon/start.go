@@ -173,6 +173,7 @@ func runStartCmd(_ *cobra.Command, _ []string) {
 		kubeClient,
 		ctrlctx.InformerFactory.Machineconfiguration().V1().MachineConfigs(),
 		ctrlctx.KubeInformerFactory.Core().V1().Nodes(),
+		ctrlctx.ConfigInformerFactory.Config().V1().DNSes(),
 		ctrlctx.InformerFactory.Machineconfiguration().V1().ControllerConfigs(),
 		startOpts.kubeletHealthzEnabled,
 		startOpts.kubeletHealthzEndpoint,
