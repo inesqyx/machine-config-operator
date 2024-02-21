@@ -76,7 +76,11 @@ func TestRunKubeletBootstrap(t *testing.T) {
 				},
 			}
 
+<<<<<<< HEAD
 			fgAccess := featuregates.NewHardcodedFeatureGateAccess([]osev1.FeatureGateName{"AlibabaPlatform"}, nil)
+=======
+			fgAccess := featuregates.NewHardcodedFeatureGateAccess([]osev1.FeatureGateName{}, []osev1.FeatureGateName{})
+>>>>>>> e728f9da0 (ocb-api)
 			mcs, err := RunKubeletBootstrap("../../../templates", cfgs, cc, fgAccess, nil, pools)
 			require.NoError(t, err)
 			require.Len(t, mcs, len(cfgs))
@@ -201,7 +205,12 @@ func TestAddKubeletCfgAfterBootstrapKubeletCfg(t *testing.T) {
 	for _, platform := range []configv1.PlatformType{configv1.AWSPlatformType, configv1.NonePlatformType, "unrecognized"} {
 		t.Run(string(platform), func(t *testing.T) {
 			f := newFixture(t)
+<<<<<<< HEAD
 			fgAccess := featuregates.NewHardcodedFeatureGateAccess([]osev1.FeatureGateName{"AlibabaPlatform"}, nil)
+=======
+
+			fgAccess := featuregates.NewHardcodedFeatureGateAccess([]osev1.FeatureGateName{}, []osev1.FeatureGateName{})
+>>>>>>> e728f9da0 (ocb-api)
 			f.newController(fgAccess)
 
 			cc := newControllerConfig(ctrlcommon.ControllerConfigName, platform)

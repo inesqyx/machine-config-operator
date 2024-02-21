@@ -610,6 +610,38 @@ func getIgnitionHost(infraStatus *configv1.InfrastructureStatus) (string, error)
 	return ignitionHost, nil
 }
 
+<<<<<<< HEAD
+=======
+func (optr *Operator) syncCustomResourceDefinitions() error {
+	crds := []string{
+		"manifests/controllerconfig.crd.yaml",
+		"manifests/0000_80_machine-config_01_machineconfignode-TechPreviewNoUpgrade.crd.yaml",
+		"manifests/0000_80_machine-config_01_machineosbuild-TechPreviewNoUpgrade.crd.yaml",
+		"manifests/0000_80_machine-config_01_machineosconfig-TechPreviewNoUpgrade.crd.yaml",
+	}
+
+	for _, crd := range crds {
+
+		crdBytes, err := manifests.ReadFile(crd)
+		if err != nil {
+			return fmt.Errorf("error getting asset %s: %w", crd, err)
+		}
+		c := resourceread.ReadCustomResourceDefinitionV1OrDie(crdBytes)
+		_, updated, err := resourceapply.ApplyCustomResourceDefinitionV1(context.TODO(), optr.apiExtClient.ApiextensionsV1(), optr.libgoRecorder, c)
+		if err != nil {
+			return err
+		}
+		if updated {
+			if err := optr.waitForCustomResourceDefinition(c); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+>>>>>>> e728f9da0 (ocb-api)
 func (optr *Operator) syncMachineConfigPools(config *renderConfig) error {
 	mcps := []string{
 		"manifests/master.machineconfigpool.yaml",

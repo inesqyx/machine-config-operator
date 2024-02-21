@@ -25,6 +25,7 @@ func TestFeatureGateDrift(t *testing.T) {
 			cc := newControllerConfig(ctrlcommon.ControllerConfigName, platform)
 			f.ccLister = append(f.ccLister, cc)
 
+<<<<<<< HEAD
 			features := &osev1.FeatureGate{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: ctrlcommon.ClusterFeatureInstanceName,
@@ -40,6 +41,9 @@ func TestFeatureGateDrift(t *testing.T) {
 				},
 			}
 			fgAccess := featuregates.NewHardcodedFeatureGateAccess(features.Spec.FeatureGateSelection.CustomNoUpgrade.Enabled, features.Spec.FeatureGateSelection.CustomNoUpgrade.Disabled)
+=======
+			fgAccess := featuregates.NewHardcodedFeatureGateAccess([]osev1.FeatureGateName{}, []osev1.FeatureGateName{})
+>>>>>>> e728f9da0 (ocb-api)
 			ctrl := f.newController(fgAccess)
 
 			// Generate kubelet config with feature gates applied
@@ -64,7 +68,11 @@ func TestFeaturesDefault(t *testing.T) {
 	for _, platform := range []configv1.PlatformType{configv1.AWSPlatformType, configv1.NonePlatformType, "unrecognized"} {
 		t.Run(string(platform), func(t *testing.T) {
 			f := newFixture(t)
+<<<<<<< HEAD
 			fgAccess := featuregates.NewHardcodedFeatureGateAccess([]osev1.FeatureGateName{"CSIMigration"}, nil)
+=======
+			fgAccess := featuregates.NewHardcodedFeatureGateAccess([]osev1.FeatureGateName{}, []osev1.FeatureGateName{})
+>>>>>>> e728f9da0 (ocb-api)
 			f.newController(fgAccess)
 
 			cc := newControllerConfig(ctrlcommon.ControllerConfigName, platform)
@@ -167,7 +175,11 @@ func TestBootstrapFeaturesDefault(t *testing.T) {
 			mcp2 := helpers.NewMachineConfigPool("worker", nil, helpers.WorkerSelector, "v0")
 			mcps := []*mcfgv1.MachineConfigPool{mcp, mcp2}
 
+<<<<<<< HEAD
 			fgAccess := featuregates.NewHardcodedFeatureGateAccess(nil, nil)
+=======
+			fgAccess := featuregates.NewHardcodedFeatureGateAccess([]osev1.FeatureGateName{}, []osev1.FeatureGateName{})
+>>>>>>> e728f9da0 (ocb-api)
 
 			mcs, err := RunFeatureGateBootstrap("../../../templates", fgAccess, nil, cc, mcps)
 			if err != nil {
@@ -208,6 +220,7 @@ func TestBootstrapFeaturesCustomNoUpgrade(t *testing.T) {
 				originalKubeConfig, err := decodeKubeletConfig(conf)
 				require.NoError(t, err)
 
+<<<<<<< HEAD
 				features := &osev1.FeatureGate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: ctrlcommon.ClusterFeatureInstanceName,
@@ -223,6 +236,9 @@ func TestBootstrapFeaturesCustomNoUpgrade(t *testing.T) {
 				}
 
 				fgAccess := featuregates.NewHardcodedFeatureGateAccess(features.Spec.FeatureGateSelection.CustomNoUpgrade.Enabled, features.Spec.FeatureGateSelection.CustomNoUpgrade.Disabled)
+=======
+				fgAccess := featuregates.NewHardcodedFeatureGateAccess([]osev1.FeatureGateName{}, []osev1.FeatureGateName{})
+>>>>>>> e728f9da0 (ocb-api)
 				defaultFeatureGates, err := generateFeatureMap(fgAccess)
 				if err != nil {
 					t.Errorf("could not generate defaultFeatureGates: %v", err)
