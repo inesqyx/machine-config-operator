@@ -5,65 +5,21 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	rpmostreeclient "github.com/coreos/rpmostree-client-go/pkg/client"
 	pivotutils "github.com/openshift/machine-config-operator/pkg/daemon/pivot/utils"
-	"gopkg.in/yaml.v2"
 	"k8s.io/klog/v2"
 )
-
-// RpmOstreeClient provides all RpmOstree related methods in one structure.
-// This structure implements DeploymentClient
-//
-// TODO(runcom): make this private to pkg/daemon!!!
-type RpmOstreeClient struct {
-	client rpmostreeclient.Client
-}
-
-// NewNodeUpdaterClient is a wrapper to create an RpmOstreeClient
-func NewNodeUpdaterClient() RpmOstreeClient {
-	return RpmOstreeClient{
-		client: rpmostreeclient.NewClient("machine-config-daemon"),
-	}
-}
 
 // Synchronously invoke rpm-ostree, writing its stdout to our stdout,
 // and gathering stderr into a buffer which will be returned in err
 // in case of error.
-func runRpmOstree(args ...string) error {
-	return runCmdSync("rpm-ostree", args...)
-}
-
-// See https://bugzilla.redhat.com/show_bug.cgi?id=2111817
-func bug2111817Workaround() error {
-	targetUnit := "/run/systemd/system/rpm-ostreed.service.d/bug2111817.conf"
-	// Do nothing if the file exists
-	if _, err := os.Stat(targetUnit); err == nil {
-		return nil
-	}
-	err := os.MkdirAll(filepath.Dir(targetUnit), 0o755)
-	if err != nil {
-		return err
-	}
-	dropin := `[Service]
-InaccessiblePaths=
-`
-	if err := writeFileAtomicallyWithDefaults(targetUnit, []byte(dropin)); err != nil {
-		return err
-	}
-	if err := runCmdSync("systemctl", "daemon-reload"); err != nil {
-		return err
-	}
-	klog.Infof("Enabled workaround for bug 2111817")
-	return nil
+func runBootc(args ...string) error {
+	return runCmdSync("bootc", args...)
 }
 
 func (r *RpmOstreeClient) Initialize() error {
-	if err := bug2111817Workaround(); err != nil {
-		return err
-	}
 
 	// Commands like update and rebase need the pull secrets to pull images and manifests,
 	// make sure we get access to them when we Initialize
@@ -74,10 +30,6 @@ func (r *RpmOstreeClient) Initialize() error {
 	}
 
 	return nil
-}
-
-func (r *RpmOstreeClient) Peel() *rpmostreeclient.Client {
-	return &r.client
 }
 
 // GetBootedDeployment returns the current deployment found
@@ -95,7 +47,7 @@ func (r *RpmOstreeClient) GetBootedAndStagedDeployment() (booted, staged *rpmost
 
 // GetStatus returns multi-line human-readable text describing system status
 func (r *RpmOstreeClient) GetStatus() (string, error) {
-	output, err := runGetOut("rpm-ostree", "status")
+	output, err := runGetOut("bootc", "status")
 	if err != nil {
 		return "", err
 	}
@@ -106,6 +58,8 @@ func (r *RpmOstreeClient) GetStatus() (string, error) {
 // GetBootedOSImageURL returns the image URL as well as the OSTree version(for logging) and the ostree commit (for comparisons)
 // Returns the empty string if the host doesn't have a custom origin that matches pivot://
 // (This could be the case for e.g. FCOS, or a future RHCOS which comes not-pivoted by default)
+
+// replace references w bootc
 func (r *RpmOstreeClient) GetBootedOSImageURL() (string, string, string, error) {
 	bootedDeployment, _, err := r.GetBootedAndStagedDeployment()
 	if err != nil {
@@ -134,6 +88,7 @@ func (r *RpmOstreeClient) GetBootedOSImageURL() (string, string, string, error) 
 	return osImageURL, bootedDeployment.Version, baseChecksum, nil
 }
 
+// stay the same
 func podmanInspect(imgURL string) (imgdata *imageInspection, err error) {
 	// Pull the container image if not already available
 	var authArgs []string
@@ -166,53 +121,12 @@ func podmanInspect(imgURL string) (imgdata *imageInspection, err error) {
 
 }
 
-// RpmOstreeIsNewEnoughForLayering returns true if the version of rpm-ostree on the
-// host system is new enough for layering.
-// VersionData represents the static information about rpm-ostree.
-type VersionData struct {
-	Version  string   `yaml:"Version"`
-	Features []string `yaml:"Features"`
-	Git      string   `yaml:"Git"`
-}
-
-type RpmOstreeVersionData struct {
-	Root VersionData `yaml:"rpm-ostree"`
-}
-
-// RpmOstreeVersion returns the running rpm-ostree version number
-func rpmOstreeVersion() (*VersionData, error) {
-	buf, err := runGetOut("rpm-ostree", "--version")
-	if err != nil {
-		return nil, err
-	}
-
-	var q RpmOstreeVersionData
-	if err := yaml.Unmarshal(buf, &q); err != nil {
-		return nil, fmt.Errorf("failed to parse `rpm-ostree --version` output: %w", err)
-	}
-
-	return &q.Root, nil
-}
-
-func (r *RpmOstreeClient) IsNewEnoughForLayering() (bool, error) {
-	verdata, err := rpmOstreeVersion()
-	if err != nil {
-		return false, err
-	}
-	for _, v := range verdata.Features {
-		if v == "container" {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
 // RebaseLayered rebases system or errors if already rebased
-func (r *RpmOstreeClient) RebaseLayered(imgURL string) (err error) {
+func Switch(imgURL string) (err error) {
 	// Try to re-link the merged pull secrets if they exist, since it could have been populated without a daemon reboot
 	useMergedPullSecrets()
 	klog.Infof("Executing rebase to %s", imgURL)
-	return runRpmOstree("rebase", "--experimental", "ostree-unverified-registry:"+imgURL)
+	return runBootc("switch", "ostree-unverified-registry:"+imgURL)
 }
 
 // linkOstreeAuthFile gives the rpm-ostree client access to secrets in the file located at `path` by symlinking so that
