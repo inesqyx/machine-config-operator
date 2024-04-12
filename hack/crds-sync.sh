@@ -2,15 +2,16 @@
 
 set -euo pipefail
 
-# map names of CRD files between the vendored openshift/api repository and the ./install directory
-CRDS_MAPPING=( "v1/zz_generated.crd-manifests/0000_80_machine-config_01_containerruntimeconfigs.crd.yaml:0000_80_machine-config_01_containerruntimeconfig.crd.yaml"
-               "v1/zz_generated.crd-manifests/0000_80_machine-config_01_kubeletconfigs.crd.yaml:0000_80_machine-config_01_kubeletconfig.crd.yaml"
-               "v1/zz_generated.crd-manifests/0000_80_machine-config_01_machineconfigs.crd.yaml:0000_80_machine-config_01_machineconfig.crd.yaml"
-               "v1/zz_generated.crd-manifests/0000_80_machine-config_01_machineconfigpools-Default.crd.yaml:0000_80_machine-config_01_machineconfigpool.crd.yaml"
-               "v1alpha1/zz_generated.crd-manifests/0000_80_machine-config_01_machineconfignodes-TechPreviewNoUpgrade.crd.yaml:0000_80_machine-config_01_machineconfignode-TechPreviewNoUpgrade.crd.yaml"
-                "v1alpha1/zz_generated.crd-manifests/0000_80_machine-config_01_machineosbuilds-TechPreviewNoUpgrade.crd.yaml:0000_80_machine-config_01_machineosbuild-TechPreviewNoUpgrade.crd.yaml"
-                "v1alpha1/zz_generated.crd-manifests/0000_80_machine-config_01_machineosconfigs-TechPreviewNoUpgrade.crd.yaml:0000_80_machine-config_01_machineosconfig-TechPreviewNoUpgrade.crd.yaml") 
-                #TODO(jkyros): 0000_80_machine-config_01_machine-config-operator_02_containerruntimeconfig.crd.yaml)
+# This is the MCO's API directory in openshift/api, every CRD living here can be directly be copied over.
+cp vendor/github.com/openshift/api/machineconfiguration/v1/zz_generated.crd-manifests/*.crd.yaml install/.
+cp vendor/github.com/openshift/api/machineconfiguration/v1alpha1/zz_generated.crd-manifests/*.crd.yaml install/.
+
+#  These are MCO CRDs that live in other parts of the openshift/api, so the copies need to be more specific
+CRDS_MAPPING=( 
+   "operator/v1/zz_generated.crd-manifests/0000_80_machine-config_01_machineconfigurations-Default.crd.yaml:0000_80_machine-config_01_machineconfigurations-Default.crd.yaml"
+   "operator/v1/zz_generated.crd-manifests/0000_80_machine-config_01_machineconfigurations-TechPreviewNoUpgrade.crd.yaml:0000_80_machine-config_01_machineconfigurations-TechPreviewNoUpgrade.crd.yaml"
+   "config/v1alpha1/zz_generated.crd-manifests/0000_10_config-operator_01_clusterimagepolicies-TechPreviewNoUpgrade.crd.yaml:0000_10_config-operator_01_clusterimagepolicies-TechPreviewNoUpgrade.crd.yaml"
+)
 
 for crd in "${CRDS_MAPPING[@]}" ; do
     SRC="${crd%%:*}"
