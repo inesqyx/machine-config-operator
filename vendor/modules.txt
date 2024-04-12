@@ -831,6 +831,7 @@ github.com/openshift/api/cloudnetwork
 github.com/openshift/api/cloudnetwork/v1
 github.com/openshift/api/config
 github.com/openshift/api/config/v1
+github.com/openshift/api/config/v1/zz_generated.crd-manifests
 github.com/openshift/api/config/v1alpha1
 github.com/openshift/api/config/v1alpha1/zz_generated.crd-manifests
 github.com/openshift/api/console
@@ -870,6 +871,7 @@ github.com/openshift/api/operator
 github.com/openshift/api/operator/v1
 github.com/openshift/api/operator/v1/zz_generated.crd-manifests
 github.com/openshift/api/operator/v1alpha1
+github.com/openshift/api/operator/v1alpha1/zz_generated.crd-manifests
 github.com/openshift/api/operatorcontrolplane
 github.com/openshift/api/operatorcontrolplane/v1alpha1
 github.com/openshift/api/osin
