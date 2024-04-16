@@ -820,7 +820,7 @@ func (ctrl *Controller) handleErr(err error, key interface{}) {
 // ready so we can update both the nodes' desired MachineConfig and desired
 // image annotations simultaneously.
 
-func (ctrl *Controller) GetConfigAndBuild(pool *mcfgv1.MachineConfigPool) (*mcfgv1alpha1.MachineOSConfig, *mcfgv1alpha1.MachineOSBuild, error) {
+func (ctrl *Controller) getConfigAndBuild(pool *mcfgv1.MachineConfigPool) (*mcfgv1alpha1.MachineOSConfig, *mcfgv1alpha1.MachineOSBuild, error) {
 	var ourConfig *mcfgv1alpha1.MachineOSConfig
 	var ourBuild *mcfgv1alpha1.MachineOSBuild
 	configList, err := ctrl.client.MachineconfigurationV1alpha1().MachineOSConfigs().List(context.TODO(), metav1.ListOptions{})
@@ -857,7 +857,7 @@ func (ctrl *Controller) GetConfigAndBuild(pool *mcfgv1.MachineConfigPool) (*mcfg
 
 func (ctrl *Controller) canLayeredPoolContinue(pool *mcfgv1.MachineConfigPool) (string, bool, error) {
 
-	mosc, mosb, _ := ctrl.GetConfigAndBuild(pool)
+	mosc, mosb, _ := ctrl.getConfigAndBuild(pool)
 
 	if mosc == nil || mosb == nil {
 		return "No MachineOSConfig or Build for this pool", false, nil
