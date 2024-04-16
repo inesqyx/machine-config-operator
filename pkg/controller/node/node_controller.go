@@ -193,9 +193,9 @@ func newController(
 	}
 
 	mosbInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    ctrl.addMachineConfigPool,
-		UpdateFunc: ctrl.updateMachineConfigPool,
-		DeleteFunc: ctrl.deleteMachineConfigPool,
+		AddFunc:    ctrl.addMachineOSBuild,
+		UpdateFunc: ctrl.updateMachineOSBuild,
+		DeleteFunc: ctrl.deleteMachineOSBuild,
 	})
 
 	mcpInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
